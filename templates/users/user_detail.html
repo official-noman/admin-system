@@ -1,0 +1,12 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <h3>Welcome, {{ target_user.username }}</h3>
+        <p>Role: {{ target_user.role|title }}</p>
+        <p>Email: {{ target_user.email }}</p>
+        <p>Date Joined: {{ target_user.date_joined|date:"d M Y" }}</p>
+    </div>
+</div>
+{% endblock %}

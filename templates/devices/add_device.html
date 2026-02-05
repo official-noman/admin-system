@@ -1,0 +1,39 @@
+{% extends "partials/layouts/main.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header border-bottom">
+                <h4 class="card-title">Device Add</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Select Operator</label>
+                        {{ form.operator }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sim Number</label>
+                        {{ form.sim_number }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <div class="position-relative auth-pass-inputgroup">
+                            {{ form.password }}
+                            <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted" type="button"><i class="ri-eye-fill align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sim Pin</label>
+                        {{ form.sim_pin }}
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary w-100 py-2">Device Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

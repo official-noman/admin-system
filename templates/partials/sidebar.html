@@ -1,0 +1,123 @@
+{% load static %}
+
+<!-- START Sidebar -->
+<aside class="pe-app-sidebar" id="sidebar">
+    <!-- Sidebar Logo -->
+    <div class="pe-app-sidebar-logo px-6 d-flex align-items-center position-relative">
+        <a href="{% url 'home' %}" class="d-flex align-items-end logo-main">
+            <img height="35" width="34" class="logo-dark" alt="Urbix Logo Dark" src="{% static 'assets/images/logo-md.png' %}">
+            <img height="35" width="34" class="logo-light" alt="Urbix Logo Light" src="{% static 'assets/images/logo-md-light.png' %}">
+            <h3 class="text-body-emphasis fw-bolder mb-0 ms-1">Urbix</h3>
+        </a>
+        <button type="button" id="sidebarDefaultArrow" class="btn btn-sm p-0 fs-16 text-body-emphasis ms-auto float-end d-none icon-hover-btn" aria-label="Toggle Sidebar">
+            <i class="ri-arrow-right-line fs-5"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="pe-app-sidebar-menu nav nav-pills" data-simplebar id="sidebar-simplebar">
+        <div class="d-flex align-items-start flex-column w-100">
+            <ul class="pe-main-menu list-unstyled">
+                
+                <!-- ============================================================ -->
+                <!-- MAIN SECTION -->
+                <!-- ============================================================ -->
+                <li class="pe-menu-title">Main</li>
+                
+                <!-- Dashboard -->
+                <li class="pe-slide">
+                    <a href="{% url 'home' %}" class="pe-nav-link">
+                        <i class="ri-dashboard-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- ============================================================ -->
+                <!-- MANAGEMENT SECTION (Role Based) -->
+                <!-- ============================================================ -->
+                <li class="pe-menu-title">Management</li>
+
+                <!-- 1. ROOT ROLE -->
+                {% if user.role == 'root' %}
+                <li class="pe-slide">
+                    <a href="{% url 'create_user' %}" class="pe-nav-link">
+                        <i class="ri-user-add-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">Create Company</span>
+                    </a>
+                </li>
+
+                <li class="pe-slide">
+                    <a href="{% url 'all_users' %}" class="pe-nav-link">
+                        <i class="ri-building-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">All Companies</span>
+                    </a>
+                </li>
+                {% endif %}
+           {% if user.role == 'company' %}
+<li class="pe-slide">
+    <a href="{% url 'edit_company_profile' %}" class="pe-nav-link">
+        <i class="ri-building-line pe-nav-icon"></i>
+        <span class="pe-nav-content">Company Profile</span>
+    </a>
+</li>
+{% endif %}
+                <!-- 2. COMPANY ROLE -->
+                {% if user.role == 'company' %}
+                <li class="pe-slide">
+                    <a href="{% url 'create_user' %}" class="pe-nav-link">
+                        <i class="ri-user-star-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">Create Admin</span>
+                    </a>
+                </li>
+                <li class="pe-slide">
+                    <a href="{% url 'all_users' %}" class="pe-nav-link">
+                        <i class="ri-team-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">My Admins</span>
+                    </a>
+                </li>
+                <li class="pe-slide">
+    <a href="{% url 'device_list' %}" class="pe-nav-link">
+        <i class="ri-list-check pe-nav-icon"></i>
+        <span class="pe-nav-content">Device List</span>
+    </a>
+</li>
+<li class="pe-slide">
+    <a href="{% url 'add_device' %}" class="pe-nav-link">
+        <i class="ri-add-circle-line pe-nav-icon"></i>
+        <span class="pe-nav-content">Add Device</span>
+    </a>
+</li>
+                {% endif %}
+
+
+                <!-- 3. ADMIN ROLE -->
+                {% if user.role == 'admin' %}
+                <li class="pe-slide">
+                    <a href="{% url 'create_user' %}" class="pe-nav-link">
+                        <i class="ri-user-add-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">Create Staff</span>
+                    </a>
+                </li>
+                <li class="pe-slide">
+                    <a href="{% url 'all_users' %}" class="pe-nav-link">
+                        <i class="ri-file-user-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">My Staff List</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- 4. STAFF ROLE -->
+                {% if user.role == 'staff' %}
+                <li class="pe-slide">
+                    <a href="{% url 'user_detail' user.id %}" class="pe-nav-link">
+                        <i class="ri-user-line pe-nav-icon"></i>
+                        <span class="pe-nav-content">My Profile</span>
+                    </a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </div>
+    </nav>
+</aside>
+<!-- END Sidebar -->

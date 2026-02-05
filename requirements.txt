@@ -1,0 +1,11 @@
+
+
+Django>=5.0.0
+djangorestframework
+django-cors-headers
+django-webpack-loader
+whitenoise
+python-dotenv
+django-axes
+django-csp
+

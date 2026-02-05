@@ -1,0 +1,32 @@
+{% extends "partials/layouts/main.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ page_title }}</h4> 
+    </div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email }}</td>
+                    <td><span class="badge bg-primary">{{ u.role|title }}</span></td>
+                    <td>{{ u.date_joined|date:"d M Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">No admins found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
