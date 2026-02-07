@@ -1,4 +1,6 @@
 {% extends "partials/layouts/main.html" %}
+{% load static %}
+
 {% block content %}
 <div class="row">
     <div class="col-12">
@@ -23,11 +25,14 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-sm me-3">
-                                            <div class="avatar-title rounded bg-light text-primary fs-20">
-                                                <i class="ri-signal-tower-fill"></i>
-                                            </div>
+                                        <!-- Operator Logo with Loop Fix -->
+                                        <div class="me-3">
+                                            <img src="/static/assets/images/operators/{{ device.operator }}.svg" 
+                                                 alt="{{ device.get_operator_display }}" 
+                                                 width="40" height="40" 
+                                                 onerror="this.onerror=null; this.src='/static/assets/images/operators/default.png';">
                                         </div>
+                                        
                                         <div>
                                             <h5 class="fs-14 mb-1">{{ device.get_operator_display }}</h5>
                                             <p class="text-muted mb-0">{{ device.sim_number }}</p>
@@ -35,10 +40,16 @@
                                     </div>
                                 </td>
                                 <td>{{ device.balance }}</td>
-                                <td><span class="badge bg-success-subtle text-success">{{ device.status }}</span></td>
+                                <td>
+                                    <a href="#" class="badge {% if device.status == 'Active' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %} border-0 text-decoration-none">
+                                        {{ device.status }}
+                                    </a>
+                                </td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-1">
-                                        <a href="{% url 'edit_device' device.id %}" class="btn btn-soft-info btn-sm"><i class="ri-edit-line"></i> Edit</a>
+                                        <a href="{% url 'edit_device' device.id %}" class="btn btn-soft-info btn-sm">
+                                            <i class="ri-edit-line"></i> Edit
+                                        </a>
                                         <button class="btn btn-soft-danger btn-sm"><i class="ri-delete-bin-line"></i> Delete</button>
                                         <button class="btn btn-soft-warning btn-sm"><i class="ri-logout-box-r-line"></i> Logout</button>
                                         <button class="btn btn-soft-primary btn-sm"><i class="ri-refund-line"></i> Balance</button>
