@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -16,7 +17,7 @@
                             <tr>
                                 <th>OPERATOR</th>
                                 <th>BALANCE</th>
-                                <th>STATUS</th>
+                                <th>CONNECTION STATUS</th>
                                 <th class="text-center">ACTIONS</th>
                             </tr>
                         </thead>
@@ -25,41 +26,52 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <!-- Operator Logo with Loop Fix -->
                                         <div class="me-3">
-                                            <img src="/static/assets/images/operators/{{ device.operator }}.svg" 
+                                            <img src="{% static 'assets/images/operators/'|add:device.operator|add:'.svg' %}" 
                                                  alt="{{ device.get_operator_display }}" 
                                                  width="40" height="40" 
-                                                 onerror="this.onerror=null; this.src='/static/assets/images/operators/default.png';">
+                                                 onerror="this.onerror=null; this.src='{% static 'assets/images/operators/default.png' %}';">
                                         </div>
-                                        
                                         <div>
                                             <h5 class="fs-14 mb-1">{{ device.get_operator_display }}</h5>
                                             <p class="text-muted mb-0">{{ device.sim_number }}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ device.balance }}</td>
+                                <td>{{ device.balance|default:"N/A" }}</td>
                                 <td>
-                                    <a href="#" class="badge {% if device.status == 'Active' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %} border-0 text-decoration-none">
-                                        {{ device.status }}
-                                    </a>
+                                    {% if device.session_data %}
+                                        <span class="badge bg-success-subtle text-success">
+                                            <i class="ri-link-m me-1"></i>Connected
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger">
+                                            <i class="ri-link-unlink-m me-1"></i>Disconnected
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-1">
+                                        {# === CONNECT BUTTON === #}
+                                        {# We inject the Django URLs directly into data attributes to avoid 404 errors #}
+                                        <button 
+                                            class="btn btn-soft-success btn-sm connect-btn"
+                                            data-device-id="{{ device.id }}"
+                                            data-send-url="{% url 'send_otp' device.id %}" 
+                                            data-verify-url="{% url 'verify_otp' device.id %}"
+                                        >
+                                            <i class="ri-login-box-line"></i> Connect
+                                        </button>
+                                        
                                         <a href="{% url 'edit_device' device.id %}" class="btn btn-soft-info btn-sm">
                                             <i class="ri-edit-line"></i> Edit
                                         </a>
                                         <button class="btn btn-soft-danger btn-sm"><i class="ri-delete-bin-line"></i> Delete</button>
-                                        <button class="btn btn-soft-warning btn-sm"><i class="ri-logout-box-r-line"></i> Logout</button>
-                                        <button class="btn btn-soft-primary btn-sm"><i class="ri-refund-line"></i> Balance</button>
-                                        <button class="btn btn-soft-secondary btn-sm"><i class="ri-history-line"></i> Recharge</button>
-                                        <button class="btn btn-soft-dark btn-sm"><i class="ri-cellphone-line"></i> Device</button>
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center">No devices found.</td></tr>
+                            <tr><td colspan="4" class="text-center">No devices found. Click '+ Add Device' to get started.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -68,4 +80,133 @@
         </div>
     </div>
 </div>
-{% endblock %}
+
+<!-- ================================================================== -->
+<!-- OTP MODAL -->
+<!-- ================================================================== -->
+<div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="otpModalLabel"><i class="ri-shield-keyhole-line me-1"></i> Enter OTP to Connect</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">A request has been sent to the operator. Please check your device and enter the OTP below.</p>
+                <div class="mb-3">
+                    <label for="otpInput" class="form-label">OTP Code</label>
+                    <input type="text" class="form-control" id="otpInput" placeholder="Enter OTP code" autocomplete="off">
+                    <input type="hidden" id="deviceIdInput">
+                </div>
+                <div id="loadingIndicator" class="text-center" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 mb-0">Verifying OTP and logging in... Please wait.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitOtpBtn">Submit & Connect</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Modal Elements
+    const otpModalElement = document.getElementById('otpModal');
+    const otpModal = new bootstrap.Modal(otpModalElement);
+    const deviceIdInput = document.getElementById('deviceIdInput');
+    const otpInput = document.getElementById('otpInput');
+    const submitOtpBtn = document.getElementById('submitOtpBtn');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+
+    // Variable to store the specific verify URL for the clicked device
+    let currentVerifyUrl = '';
+
+    // 1. Handle "Connect" Button Click (Step 1: Send OTP)
+    document.querySelectorAll('.connect-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const deviceId = this.getAttribute('data-device-id');
+            
+            // Get the correct URLs generated by Django
+            const sendOtpUrl = this.getAttribute('data-send-url');
+            const verifyOtpUrl = this.getAttribute('data-verify-url');
+            
+            // Store the verify URL to use in the next step
+            currentVerifyUrl = verifyOtpUrl;
+
+            const originalText = this.innerHTML;
+            
+            // Update UI
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending OTP...';
+
+            // Call Backend to Start Playwright & Send OTP
+            fetch(sendOtpUrl)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Success: Open Modal
+                        deviceIdInput.value = deviceId;
+                        otpInput.value = ''; // Clear previous input
+                        loadingIndicator.style.display = 'none';
+                        otpModal.show();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Network error occurred. Please check console.');
+                })
+                .finally(() => {
+                    // Reset Button
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                });
+        });
+    });
+
+    // 2. Handle "Submit" Button Click (Step 2: Verify OTP)
+    submitOtpBtn.addEventListener('click', function () {
+        const otp = otpInput.value.trim();
+        
+        if (!otp) {
+            alert('Please enter the OTP.');
+            return;
+        }
+
+        // Update UI
+        loadingIndicator.style.display = 'block';
+        submitOtpBtn.disabled = true;
+
+        // Call Backend to Verify OTP & Complete Login
+        // We use the URL stored from the previous step
+        fetch(`${currentVerifyUrl}?otp=${otp}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Connected Successfully!');
+                    window.location.reload(); // Reload to show updated status
+                } else {
+                    alert('Failed: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error verifying OTP.');
+            })
+            .finally(() => {
+                loadingIndicator.style.display = 'none';
+                submitOtpBtn.disabled = false;
+            });
+    });
+});
+</script>
+{% endblock js %}
