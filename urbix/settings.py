@@ -27,6 +27,8 @@ ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').sp
 
 INSTALLED_APPS = [
     # Django apps
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -127,12 +129,27 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = 'login'
 
+# ASGI Application path
+ASGI_APPLICATION = 'urbix.asgi.application'
+
+# Redis Channel Layer Configuration (For Docker)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('redis', 6379)], 
+        },
+    },
+}
+
+
 # ==============================================================================
 # INTERNATIONALIZATION
 # ==============================================================================
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Dhaka'
+
 USE_I18N = True
 USE_TZ = True
 

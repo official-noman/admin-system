@@ -8,4 +8,8 @@ whitenoise
 python-dotenv
 django-axes
 django-csp
-
+playwright
+pytest-playwright
+channels-redis
+daphne
+tzdata
