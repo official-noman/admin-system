@@ -1,14 +1,57 @@
 version: '3.8'
+
 services:
-  web:
-    build: .
-    ports: ["8000:8000"]
-    volumes: [".:/app"]
-    depends_on: [redis]
-    environment:
-      - DISPLAY=host.docker.internal:0.0  
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+  # 1. Message Broker & Cache
   redis:
     image: redis:alpine
-    ports: ["6379:6379"]
+    container_name: urbix_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # 2. Main Django Application (HTTP + WebSockets)
+  web:
+    build: .
+    container_name: urbix_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DISPLAY=host.docker.internal:0.0
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=urbix.settings
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # 3. Celery Worker (Playwright Background Tasks)
+  worker:
+    build: .
+    container_name: urbix_worker
+    command: celery -A urbix worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+    environment:
+      - DISPLAY=host.docker.internal:0.0
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=urbix.settings
+      - PLAYWRIGHT_HEADLESS=false  # Set to 'true' for production, 'false' for XLaunch debugging
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      - web
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local

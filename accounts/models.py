@@ -161,6 +161,8 @@ class Device(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)       # auto-updates on every save
+    session_data = models.TextField(null=True, blank=True)
+    
 
     class Meta:
         ordering            = ["-created_at"]

@@ -13,3 +13,4 @@ pytest-playwright
 channels-redis
 daphne
 tzdata
+celery

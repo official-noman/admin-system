@@ -3,16 +3,31 @@
 
 {% block content %}
 
+{# ============================================================================ #}
+{# DEVICE LIST TABLE                                                           #}
+{# ============================================================================ #}
 <div class="row">
     <div class="col-12">
         <div class="card">
+            {# ================================================================ #}
+            {# CARD HEADER - Title and Add Device Button                       #}
+            {# ================================================================ #}
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="card-title"><i class="ri-smartphone-line me-1"></i> Device List</h4>
-                <a href="{% url 'add_device' %}" class="btn btn-primary btn-sm">+ Add Device</a>
+                <h4 class="card-title">
+                    <i class="ri-smartphone-line me-1"></i> Device List
+                </h4>
+                <a href="{% url 'add_device' %}" class="btn btn-primary btn-sm">
+                    + Add Device
+                </a>
             </div>
+
+            {# ================================================================ #}
+            {# CARD BODY - Device Table                                        #}
+            {# ================================================================ #}
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table align-middle table-nowrap mb-0">
+                        {# Table Header #}
                         <thead class="table-light">
                             <tr>
                                 <th>OPERATOR</th>
@@ -21,57 +36,121 @@
                                 <th class="text-center">ACTIONS</th>
                             </tr>
                         </thead>
+
+                        {# Table Body - Device Rows #}
                         <tbody>
                             {% for device in devices %}
                             <tr>
+                                {# ============================================ #}
+                                {# COLUMN 1: Operator Logo and Phone Number    #}
+                                {# ============================================ #}
                                 <td>
                                     <div class="d-flex align-items-center">
+                                        {# Operator Logo #}
                                         <div class="me-3">
                                             <img src="{% static 'assets/images/operators/'|add:device.operator|add:'.svg' %}" 
                                                  alt="{{ device.get_operator_display }}" 
-                                                 width="40" height="40" 
+                                                 width="40" 
+                                                 height="40" 
                                                  onerror="this.onerror=null; this.src='{% static 'assets/images/operators/default.png' %}';">
                                         </div>
+                                        
+                                        {# Operator Name and Phone Number #}
                                         <div>
                                             <h5 class="fs-14 mb-1">{{ device.get_operator_display }}</h5>
                                             <p class="text-muted mb-0">{{ device.sim_number }}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ device.balance|default:"N/A" }}</td>
+
+                                {# ============================================ #}
+                                {# COLUMN 2: Account Balance                   #}
+                                {# ============================================ #}
+                                <td>
+                                    <span class="fw-semibold">৳{{ device.balance|default:"0.00" }}</span>
+                                </td>
+
+                                {# ============================================ #}
+                                {# COLUMN 3: Connection Status Badge           #}
+                                {# ============================================ #}
                                 <td>
                                     {% if device.session_data %}
+                                        {# Connected - Green Badge #}
                                         <span class="badge bg-success-subtle text-success">
                                             <i class="ri-link-m me-1"></i>Connected
                                         </span>
                                     {% else %}
+                                        {# Disconnected - Red Badge #}
                                         <span class="badge bg-danger-subtle text-danger">
                                             <i class="ri-link-unlink-m me-1"></i>Disconnected
                                         </span>
                                     {% endif %}
                                 </td>
+
+                                {# ============================================ #}
+                                {# COLUMN 4: Action Buttons                    #}
+                                {# ============================================ #}
                                 <td>
                                     <div class="d-flex justify-content-center gap-1">
-                                        {# === CONNECT BUTTON === #}
-                                        {# We inject the Django URLs directly into data attributes to avoid 404 errors #}
+                                        {# Connect/Login Button - Only shown when disconnected #}
                                         <button 
                                             class="btn btn-soft-success btn-sm connect-btn"
                                             data-device-id="{{ device.id }}"
-                                            data-send-url="{% url 'send_otp' device.id %}" 
-                                            data-verify-url="{% url 'verify_otp' device.id %}"
+                                            data-send-url="{% url 'send_otp' device.id %}"
                                         >
                                             <i class="ri-login-box-line"></i> Connect
                                         </button>
                                         
-                                        <a href="{% url 'edit_device' device.id %}" class="btn btn-soft-info btn-sm">
+                                        {# Edit Button #}
+                                        <a href="{% url 'edit_device' device.id %}" 
+                                           class="btn btn-soft-info btn-sm">
                                             <i class="ri-edit-line"></i> Edit
                                         </a>
-                                        <button class="btn btn-soft-danger btn-sm"><i class="ri-delete-bin-line"></i> Delete</button>
+                                        
+                                        {# Delete Button #}
+                                        <button class="btn btn-soft-danger btn-sm">
+                                            <i class="ri-delete-bin-line"></i> Delete
+                                        </button>
+                                         {% if device.session_data %}
+                                          <!-- 3. Logout/Connect Button (Dynamic) -->
+            <a href="{% url 'disconnect_device' device.id %}" class="btn btn-soft-warning btn-sm">
+                <i class="ri-logout-box-r-line"></i> Logout
+            </a>
+        {% else %}
+            <button class="btn btn-soft-success btn-sm connect-btn" data-device-id="{{ device.id }}" data-send-url="{% url 'send_otp' device.id %}">
+                <i class="ri-login-box-line"></i> Login
+            </button>
+        {% endif %}
+
+          <!-- 4. Balance Button -->
+
+        <button class="btn btn-soft-primary btn-sm">
+            <i class="ri-refund-line"></i> Balance
+        </button>
+
+        <!-- 5. Recharge Button (Future Task) -->
+        <button class="btn btn-soft-secondary btn-sm">
+            <i class="ri-history-line"></i> Recharge
+        </button>
+
+        <!-- 6. Device Button (Future Task) -->
+        <button class="btn btn-soft-dark btn-sm">
+            <i class="ri-cellphone-line"></i> Device
+        </button>
+
+
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center">No devices found. Click '+ Add Device' to get started.</td></tr>
+                            {# ============================================ #}
+                            {# EMPTY STATE - Shown when no devices exist   #}
+                            {# ============================================ #}
+                            <tr>
+                                <td colspan="4" class="text-center">
+                                    No devices found. Click '+ Add Device' to get started.
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -81,33 +160,67 @@
     </div>
 </div>
 
-<!-- ================================================================== -->
-<!-- OTP MODAL -->
-<!-- ================================================================== -->
+{# ============================================================================ #}
+{# OTP INPUT MODAL                                                             #}
+{# ============================================================================ #}
 <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
+            {# ================================================================ #}
+            {# MODAL HEADER - Title and Close Button                           #}
+            {# ================================================================ #}
             <div class="modal-header">
-                <h5 class="modal-title" id="otpModalLabel"><i class="ri-shield-keyhole-line me-1"></i> Enter OTP to Connect</h5>
+                <h5 class="modal-title" id="otpModalLabel">
+                    <i class="ri-shield-keyhole-line me-1"></i> Enter OTP to Connect
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
+            {# ================================================================ #}
+            {# MODAL BODY - OTP Input and Status Messages                      #}
+            {# ================================================================ #}
             <div class="modal-body">
-                <p class="text-muted">A request has been sent to the operator. Please check your device and enter the OTP below.</p>
+                {# Instructions #}
+                <p class="text-muted">
+                    A request has been sent to the operator. Please check your device and enter the OTP below.
+                </p>
+
+                {# OTP Input Field #}
                 <div class="mb-3">
-                    <label for="otpInput" class="form-label">OTP Code</label>
-                    <input type="text" class="form-control" id="otpInput" placeholder="Enter OTP code" autocomplete="off">
+                    <label for="otpInput" class="form-label">OTP Code (6 digits)</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="otpInput" 
+                           placeholder="Enter 6-digit OTP" 
+                           maxlength="6" 
+                           autocomplete="off">
+                    
+                    {# Hidden field to store device ID #}
                     <input type="hidden" id="deviceIdInput">
                 </div>
+
+                {# Loading Indicator - Shown during OTP verification #}
                 <div id="loadingIndicator" class="text-center" style="display: none;">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="mt-2 mb-0">Verifying OTP and logging in... Please wait.</p>
                 </div>
+
+                {# Error Message - Shown when OTP verification fails #}
+                <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
             </div>
+
+            {# ================================================================ #}
+            {# MODAL FOOTER - Action Buttons                                   #}
+            {# ================================================================ #}
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitOtpBtn">Submit & Connect</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="submitOtpBtn">
+                    Submit & Connect
+                </button>
             </div>
         </div>
     </div>
@@ -115,111 +228,286 @@
 
 {% endblock content %}
 
+{# ============================================================================ #}
+{# JAVASCRIPT - Frontend Logic                                                #}
+{# ============================================================================ #}
 {% block js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Modal Elements
+    // ========================================================================
+    // DOM ELEMENT REFERENCES
+    // ========================================================================
     const otpModalElement = document.getElementById('otpModal');
     const otpModal = new bootstrap.Modal(otpModalElement);
     const deviceIdInput = document.getElementById('deviceIdInput');
     const otpInput = document.getElementById('otpInput');
     const submitOtpBtn = document.getElementById('submitOtpBtn');
     const loadingIndicator = document.getElementById('loadingIndicator');
+    const errorMessage = document.getElementById('errorMessage');
 
-    // State management
-    let currentDeviceId = '';
-    let socket = null;
+    // ========================================================================
+    // STATE VARIABLES
+    // ========================================================================
+    let currentDeviceId = '';  // Currently selected device ID
+    let socket = null;         // WebSocket connection object
 
-    // 1. Handle "Connect" Button Click (Start Playwright Flow)
+    // ========================================================================
+    // EVENT HANDLER 1: CONNECT BUTTON CLICK
+    // Purpose: Initiate Playwright login flow when user clicks "Connect"
+    // ========================================================================
     document.querySelectorAll('.connect-btn').forEach(button => {
         button.addEventListener('click', function () {
+            // Get device information from button attributes
             currentDeviceId = this.getAttribute('data-device-id');
             const sendOtpUrl = this.getAttribute('data-send-url');
             const originalText = this.innerHTML;
             
+            // Show loading state on button
             this.disabled = true;
             this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Initializing...';
 
-            // Step 1: Tell backend to launch Playwright and request OTP
+            // Step 1: Send request to backend to start Playwright
             fetch(sendOtpUrl)
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
+                        // Backend successfully started Playwright
+                        // Now show OTP modal for user to enter OTP
                         deviceIdInput.value = currentDeviceId;
                         otpInput.value = '';
                         loadingIndicator.style.display = 'none';
+                        errorMessage.style.display = 'none';
                         otpModal.show();
+                        
+                        // Auto-focus on OTP input for better UX
+                        setTimeout(() => otpInput.focus(), 500);
                     } else {
+                        // Backend returned an error
                         alert('Error: ' + data.message);
                     }
                 })
                 .catch(err => {
+                    // Network error occurred
                     console.error(err);
                     alert('Network error. Check console.');
                 })
                 .finally(() => {
+                    // Restore button to original state
                     this.disabled = false;
                     this.innerHTML = originalText;
                 });
         });
     });
 
-    // 2. Handle WebSocket OTP Submission
+    // ========================================================================
+    // EVENT HANDLER 2: OTP SUBMISSION VIA WEBSOCKET
+    // Purpose: Send user-entered OTP to backend via WebSocket
+    // ========================================================================
     submitOtpBtn.addEventListener('click', function () {
         const otp = otpInput.value.trim();
         const deviceId = deviceIdInput.value;
         
-        if (!otp || otp.length < 4) {
-            alert('Please enter a valid OTP.');
+        // ====================================================================
+        // VALIDATION: Ensure OTP is exactly 6 digits
+        // ====================================================================
+        if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+            errorMessage.textContent = 'Please enter a valid 6-digit OTP.';
+            errorMessage.style.display = 'block';
+            otpInput.focus();
             return;
         }
 
+        // Hide error message and show loading
+        errorMessage.style.display = 'none';
         loadingIndicator.style.display = 'block';
         submitOtpBtn.disabled = true;
+        otpInput.disabled = true;
 
-        // Construct WebSocket URL
+        // ====================================================================
+        // WEBSOCKET CONNECTION SETUP
+        // ====================================================================
+        // Determine WebSocket protocol (ws:// or wss://)
         const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
         const wsUrl = `${wsScheme}://${window.location.host}/ws/otp/${deviceId}/`;
 
-        // Initialize WebSocket
+        console.log('[WebSocket] Connecting to:', wsUrl);
+
+        // Initialize WebSocket connection
         socket = new WebSocket(wsUrl);
 
+        // ====================================================================
+        // WEBSOCKET EVENT: Connection Opened
+        // ====================================================================
         socket.onopen = function(e) {
-            console.log("WebSocket connection established. Sending OTP...");
+            console.log("[WebSocket] Connection established. Sending OTP:", otp);
+            
+            // Send OTP to backend via WebSocket
             socket.send(JSON.stringify({
                 'otp': otp
             }));
         };
 
+        // ====================================================================
+        // WEBSOCKET EVENT: Message Received from Backend
+        // ====================================================================
         socket.onmessage = function(e) {
-            const data = json.parse(e.data);
-            if (data.status === 'success') {
-                alert('OTP received and verified by Playwright!');
-                window.location.reload();
-            } else {
-                alert('Login failed: ' + data.message);
-                loadingIndicator.style.display = 'none';
-                submitOtpBtn.disabled = false;
+    console.log("[WebSocket] Message received:", e.data);
+    
+    try {
+        // Parse JSON response from backend
+        const data = JSON.parse(e.data);
+        
+        if (data.status === 'success') {
+            // ========================================================
+            // SUCCESS: OTP verified and login completed
+            // ========================================================
+            console.log('[WebSocket] ✓ Login successful!');
+            
+            // Show success message
+            loadingIndicator.innerHTML = `
+                <div class="text-success">
+                    <i class="ri-checkbox-circle-line fs-1"></i>
+                    <p class="mt-2 mb-0">Login successful! Refreshing...</p>
+                </div>
+            `;
+            
+            // Optional: Show balance if available
+            if (data.balance) {
+                console.log(`[WebSocket] New Balance: ৳${data.balance}`);
             }
-        };
-
-        socket.onerror = function(e) {
-            console.error("WebSocket error:", e);
-            alert("Connection error. Ensure Redis and Daphne are running.");
+            
+            // Hide OTP modal
+            const modalInstance = bootstrap.Modal.getInstance(otpModalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            
+            // Reload page to show updated device status
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            
+        } else {
+            // ========================================================
+            // FAILURE: OTP verification failed
+            // ========================================================
+            console.error('[WebSocket] Login failed:', data.message);
+            
+            // Show error message
+            errorMessage.textContent = 'Login failed: ' + (data.message || 'Unknown error');
+            errorMessage.style.display = 'block';
             loadingIndicator.style.display = 'none';
             submitOtpBtn.disabled = false;
+            otpInput.disabled = false;
+            otpInput.focus();
+        }
+        
+    } catch (err) {
+        // ============================================================
+        // ERROR: Invalid JSON response
+        // ============================================================
+        console.error('[WebSocket] JSON parse error:', err);
+        
+        errorMessage.textContent = 'Invalid response from server';
+        errorMessage.style.display = 'block';
+        loadingIndicator.style.display = 'none';
+        submitOtpBtn.disabled = false;
+        otpInput.disabled = false;
+    }
+    
+    // Close WebSocket after receiving response
+    if (socket) {
+        socket.close();
+    }
+};
+        // ====================================================================
+        // WEBSOCKET EVENT: Connection Error
+        // ====================================================================
+        socket.onerror = function(e) {
+            console.error("[WebSocket] Error:", e);
+            
+            errorMessage.textContent = 'Connection error. Ensure Redis and WebSocket server are running.';
+            errorMessage.style.display = 'block';
+            loadingIndicator.style.display = 'none';
+            submitOtpBtn.disabled = false;
+            otpInput.disabled = false;
         };
 
+        // ====================================================================
+        // WEBSOCKET EVENT: Connection Closed
+        // ====================================================================
         socket.onclose = function(e) {
-            console.log("WebSocket closed.");
-            // If the status hasn't changed to success yet, stop loading
-            setTimeout(() => {
-                if (loadingIndicator.style.display === 'block') {
-                    loadingIndicator.style.display = 'none';
-                    submitOtpBtn.disabled = false;
-                }
-            }, 3000);
+            console.log("[WebSocket] Connection closed", e.code, e.reason);
+            
+            // Only show error if we haven't already handled success/failure
+            // This prevents showing error after successful login
+            if (loadingIndicator.style.display === 'block' && errorMessage.style.display === 'none') {
+                setTimeout(() => {
+                    if (loadingIndicator.style.display === 'block') {
+                        errorMessage.textContent = 'Connection closed unexpectedly. Please try again.';
+                        errorMessage.style.display = 'block';
+                        loadingIndicator.style.display = 'none';
+                        submitOtpBtn.disabled = false;
+                        otpInput.disabled = false;
+                    }
+                }, 2000);
+            }
         };
+    });
+
+    // ========================================================================
+    // KEYBOARD SHORTCUTS
+    // ========================================================================
+    
+    // Allow Enter key to submit OTP
+    otpInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !submitOtpBtn.disabled) {
+            submitOtpBtn.click();
+        }
+    });
+
+    // ========================================================================
+    // AUTO-SUBMIT FEATURE
+    // Purpose: Automatically submit when 6 digits are entered
+    // ========================================================================
+    otpInput.addEventListener('input', function(e) {
+        // Remove any non-digit characters
+        const value = this.value.replace(/\D/g, '');
+        this.value = value;
+        
+        // Auto-submit if 6 digits are entered
+        if (value.length === 6 && !submitOtpBtn.disabled) {
+            // Small delay to let user verify the OTP
+            setTimeout(() => {
+                if (otpInput.value.length === 6) {
+                    submitOtpBtn.click();
+                }
+            }, 300);
+        }
+    });
+
+    // ========================================================================
+    // MODAL CLEANUP
+    // Purpose: Reset modal state when closed
+    // ========================================================================
+    otpModalElement.addEventListener('hidden.bs.modal', function () {
+        // Clear all input fields
+        otpInput.value = '';
+        otpInput.disabled = false;
+        deviceIdInput.value = '';
+        
+        // Hide loading and error messages
+        loadingIndicator.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        // Re-enable submit button
+        submitOtpBtn.disabled = false;
+        
+        // Close WebSocket if still open
+        if (socket) {
+            socket.close();
+            socket = null;
+        }
     });
 });
 </script>
