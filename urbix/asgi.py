@@ -18,5 +18,5 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'urbix.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    
+    "websocket": URLRouter(websocket_urlpatterns)
 })
