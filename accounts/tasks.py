@@ -1,7 +1,7 @@
 """
 Celery Tasks for Device Automation
 ===================================
-Background tasks for handling device login workflows.
+Background tasks for handling device login and balance synchronization.
 """
 
 from celery import shared_task
@@ -11,106 +11,93 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 import json
 
-
 logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# TASK 1: PLAYWRIGHT LOGIN FLOW
+# TASK 1: INITIAL PLAYWRIGHT LOGIN FLOW (With OTP)
 # ============================================================================
 @shared_task(
     bind=True,
     max_retries=3,
     autoretry_for=(Exception,),
     retry_backoff=True,
-    retry_backoff_max=600,  # Max 10 minutes between retries
-    name='accounts.run_playwright_login'  # Explicit task name for monitoring
+    name='accounts.run_playwright_login'
 )
 def run_playwright_login_task(self, device_id, operator_url, sim_number):
     """
-    Execute complete Playwright login flow in background.
-    
-    This task:
-    1. Launches browser via Playwright
-    2. Navigates to operator website
-    3. Requests OTP
-    4. Waits for OTP via Redis
-    5. Completes login
-    6. Saves session data to database
-    
-    Args:
-        device_id (str): Unique device identifier
-        operator_url (str): Operator login page URL
-        sim_number (str): SIM card number (phone number)
-        
-    Returns:
-        dict: {
-            'success': bool,
-            'message': str,
-            'device_id': str
-        }
-        
-    Raises:
-        Retry: Automatically retries up to 3 times with exponential backoff
-        
-    Retry Schedule:
-        - 1st retry: after 60 seconds
-        - 2nd retry: after 120 seconds (2 minutes)
-        - 3rd retry: after 240 seconds (4 minutes)
+    Execute complete Playwright login flow (Browser -> OTP -> Scrape -> Save).
+    Notifies frontend via WebSocket on completion.
     """
     try:
-        logger.info(f"[TASK START] Device {device_id}: Initiating login flow")
-        logger.info(f"[TASK INFO] Operator: {operator_url}, Number: {sim_number}")
+        logger.info(f"[TASK START] Device {device_id}: Initiating initial login")
         
-        # Execute full login flow
+        # 1. Execute the full login flow from manager
         success, message = PlaywrightSessionManager.run_full_login_flow(
-            device_id=str(device_id),  # Ensure string type
+            device_id=str(device_id),
             operator_url=operator_url,
             sim_number=sim_number
         )
         
+        # 2. If successful, notify the frontend WebSocket to close modal and reload
         if success:
-            # প্লে-রাইট কাজ শেষ করার পর WebSocket-কে মেসেজ পাঠানো
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
-                f"device_{device_id}", # যে গ্রুপে ব্রাউজার শুনছে
+                f"device_{device_id}", 
                 {
-                    "type": "login_result", # consumer এর ফাংশনের নাম
+                    "type": "login_result",
                     "status": "success",
-                    "message": message
+                    "message": "Login successful! Refreshing dashboard..."
                 }
             )
-            
-        # Log result based on success/failure
-        if success:
-            logger.info(f"[TASK SUCCESS] Device {device_id}: {message}")
+            logger.info(f"[TASK SUCCESS] Device {device_id}: Session captured.")
         else:
             logger.warning(f"[TASK FAILED] Device {device_id}: {message}")
         
-        # Console output for debugging (visible in docker logs)
-        print(f"[CELERY] Task completed for device {device_id}: Success={success}")
-        
-        return {
-            "success": success,
-            "message": message,
-            "device_id": device_id
-        }
+        return {"success": success, "message": message, "device_id": device_id}
         
     except Exception as exc:
-        # Log the exception with full traceback
-        logger.error(
-            f"[TASK ERROR] Device {device_id}: {str(exc)}",
-            exc_info=True  # Include full traceback in logs
-        )
-        
-        # Calculate retry countdown (exponential backoff)
-        retry_count = self.request.retries
-        countdown = 60 * (2 ** retry_count)  # 60s, 120s, 240s
-        
-        logger.warning(
-            f"[TASK RETRY] Device {device_id}: "
-            f"Attempt {retry_count + 1}/3, retrying in {countdown}s"
-        )
-        
-        # Raise retry exception
+        logger.error(f"[TASK ERROR] Device {device_id}: {str(exc)}", exc_info=True)
+        # Exponential backoff retry
+        countdown = 60 * (2 ** self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
+
+
+# ============================================================================
+# TASK 2: BACKGROUND BALANCE REFRESH (Using Saved Cookies)
+# ============================================================================
+@shared_task(
+    name='accounts.run_balance_refresh'
+)
+def run_balance_refresh_task(device_id):
+    """
+    Syncs device balance using existing session data (cookies).
+    No OTP required. Notifies UI when finished.
+    """
+    try:
+        logger.info(f"[REFRESH START] Syncing balance for device {device_id}")
+        
+        # 1. Call the refresh method from manager
+        success, message = PlaywrightSessionManager.refresh_device_balance(device_id)
+        
+        # 2. Always notify UI so the user sees the update or error
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"device_{device_id}",
+            {
+                "type": "login_result", # Reuse the same consumer handler
+                "status": "success" if success else "error",
+                "message": message
+            }
+        )
+        
+        if success:
+            logger.info(f"[REFRESH SUCCESS] Device {device_id} balance updated.")
+        else:
+            logger.error(f"[REFRESH FAILED] Device {device_id}: {message}")
+            
+        return {"success": success, "message": message}
+
+    except Exception as e:
+        logger.error(f"[REFRESH CRITICAL ERROR] Device {device_id}: {str(e)}")
+        return {"success": False, "message": str(e)}

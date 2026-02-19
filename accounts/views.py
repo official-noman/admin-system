@@ -980,3 +980,13 @@ def disconnect_device(request, device_id):
     
     messages.warning(request, f"Device {device.sim_number} has been disconnected.")
     return redirect('device_list')
+
+@login_required
+def refresh_balance_view(request, device_id):
+    device = get_object_or_404(Device, id=device_id, company=request.user)
+    
+    # ব্যাকগ্রাউন্ডে প্লে-রাইট চালু করো
+    from .tasks import run_balance_refresh_task
+    run_balance_refresh_task.delay(device.id)
+    
+    return JsonResponse({'status': 'success', 'message': 'Refreshing balance in background...'})
